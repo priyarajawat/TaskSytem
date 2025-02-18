@@ -6,12 +6,10 @@ const Token = require("../models/Token");
 
 const router = express.Router();
 
-
 bcrypt.setRandomFallback((len) => {
   const buf = new Uint8Array(len);
   return buf.map(() => Math.floor(Math.random() * 256));
 });
-
 
 // User Registration
 router.post("/register", async (req, res) => {
@@ -29,7 +27,7 @@ router.post("/register", async (req, res) => {
 
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     res.status(500).json({ message: error });
   }
 });
@@ -40,22 +38,37 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid Credentials" });
+    console.log(user)
+    // if (!user) return res.status(400).json({ message: "Invalid Credentials" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid Credentials" });
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid Credentials" });
 
     const existingToken = await Token.findOne({ userId: user._id });
     if (existingToken) {
       return res.status(400).json({ message: "User is already logged in" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-
-    res.json({ token });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
-  }
+    // Log error in the backend console
+    res.status(500).json({ 
+        message: "Server Error", 
+        error: error.message  // Send the actual error message to the frontend
+    });
+}
 });
 
 // User Logout (Handled on frontend by clearing token)
